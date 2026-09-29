@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <title>小一數學忍者：2至10的分合大對決！</title>
+    <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'ZCOOL KuaiLe', 'Comic Sans MS', cursive, sans-serif;
+            background: linear-gradient(to bottom, #0f172a, #1e3c72, #2a5298);
+            color: #fff;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            touch-action: none;
+        }
+
+        /* 頂部資訊欄 */
+        #header {
+            width: 100%;
+            padding: 12px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            z-index: 10;
+        }
+
+        .player-score {
+            font-size: 26px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 22px;
+            border-radius: 50px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+        }
+
+        #p1-info { background: linear-gradient(45deg, #ff7675, #d63031); }
+        #p2-info { background: linear-gradient(45deg, #74b9ff, #0984e3); }
+
+        #timer-box {
+            text-align: center;
+            background: #ffeaa7;
+            color: #d63031;
+            padding: 8px 25px;
+            border-radius: 30px;
+            font-size: 28px;
+            border: 4px solid #fdcb6e;
+            box-shadow: 0 0 15px rgba(253, 203, 110, 0.6);
+        }
+
+        /* 主遊戲分屏區域 */
+        #game-container {
+            width: 100vw;
+            height: calc(100vh - 80px);
+            display: flex;
+            position: relative;
+        }
+
+        .player-zone {
+            flex: 1;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #zone-p1 {
+            border-right: 4px dashed rgba(255, 255, 255, 0.35);
+            background: rgba(255, 118, 117, 0.05);
+        }
+
+        #zone-p2 {
+            background: rgba(116, 185, 255, 0.05);
+        }
+
+        /* 上方目標題目看板 */
+        .target-board {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #fdcb6e, #ffeaa7);
+            color: #2d3436;
+            padding: 10px 30px;
+            border-radius: 25px;
+            font-size: 30px;
+            font-weight: bold;
+            border: 4px solid #fff;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+            z-index: 5;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .target-num {
+            color: #d63031;
+            font-size: 38px;
+            text-shadow: 1px 1px 0px #fff;
+        }
+
+        .zone-label {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 32px;
+            opacity: 0.3;
+            pointer-events: none;
+            letter-spacing: 2px;
+        }
+
+        /* 氣球 Balloon 樣式 (顯示算式如 1 + 1) */
+        .balloon {
+            position: absolute;
+            width: 110px;
+            height: 130px;
+            border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 30px;
+            font-weight: bold;
+            color: #ffffff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.4);
+            box-shadow: inset -10px -10px 20px rgba(0,0,0,0.2), 0 8px 15px rgba(0,0,0,0.3);
+            filter: drop-shadow(0 5px 5px rgba(0,0,0,0.2));
+            z-index: 2;
+            white-space: nowrap;
+        }
+
+        /* 氣球小嘴巴與繩子 */
+        .balloon::after {
+            content: '';
+            position: absolute;
+            bottom: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-bottom: 12px solid inherit;
+        }
+
+        .balloon::before {
+            content: '';
+            position: absolute;
+            bottom: -28px;
+            left: 50%;
+            width: 2px;
+            height: 18px;
+            background: rgba(255, 255, 255, 0.7);
+        }
+
+        /* 氣球顏色系 */
+        .balloon-color-1 { background: #ff7675; }
+        .balloon-color-2 { background: #74b9ff; }
+        .balloon-color-3 { background: #55efc4; color: #2d3436; text-shadow: none; }
+        .balloon-color-4 { background: #a29bfe; }
+        .balloon-color-5 { background: #fd79a8; }
+        .balloon-color-6 { background: #ffeaa7; color: #d63031; text-shadow: none; }
+
+        /* 破裂/點擊效果 */
+        .balloon.popped {
+            pointer-events: none;
+            animation: popAnim 0.3s forwards ease-out;
+        }
+
+        @keyframes popAnim {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.4); opacity: 0.8; }
+            100% { transform: scale(0); opacity: 0; }
+        }
+
+        /* 得分與扣分提示動畫 */
+        .score-popup {
+            position: absolute;
+            font-size: 36px;
+            font-weight: bold;
+            animation: floatUp 0.8s ease-out forwards;
+            pointer-events: none;
+            z-index: 100;
+            text-shadow: 2px 2px 0px #000;
+        }
+
+        .score-plus { color: #55efc4; }
+        .score-minus { color: #ff7675; }
+
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-50px) scale(1.3); }
+        }
+
+        /* 特效光波 */
+        .slash-mark {
+            position: absolute;
+            height: 6px;
+            background: #fff;
+            border-radius: 3px;
+            box-shadow: 0 0 12px #ffeaa7, 0 0 20px #fdcb6e;
+            pointer-events: none;
+            opacity: 1;
+            transition: opacity 0.3s ease-out;
+            z-index: 50;
+        }
+
+        /* 彈窗樣式 */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(6px);
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #fff9e6, #ffeaa7);
+            color: #2d3436;
+            padding: 35px;
+            border-radius: 30px;
+            text-align: center;
+            max-width: 580px;
+            width: 90%;
+            border: 6px solid #fdcb6e;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .modal h1 {
+            font-size: 38px;
+            color: #d63031;
+            margin-bottom: 12px;
+            text-shadow: 2px 2px 0px #ffeaa7;
+        }
+
+        .modal p {
+            font-size: 20px;
+            margin: 10px 0;
+            line-height: 1.5;
+            color: #2d3436;
+        }
+
+        .rule-box {
+            background: rgba(255, 255, 255, 0.85);
+            padding: 16px;
+            border-radius: 18px;
+            margin: 18px 0;
+            text-align: left;
+            font-size: 18px;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #ff7675, #d63031);
+            color: white;
+            border: none;
+            padding: 14px 40px;
+            font-size: 26px;
+            font-family: inherit;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 6px 0 #b2bec3, 0 10px 15px rgba(0,0,0,0.2);
+            transition: all 0.1s ease;
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 0 #b2bec3, 0 12px 20px rgba(0,0,0,0.3);
+        }
+
+        .btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #b2bec3, 0 4px 6px rgba(0,0,0,0.2);
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 頂部資訊欄 -->
+    <div id="header">
+        <div id="p1-info" class="player-score">
+            <span>🥷 P1 忍者:</span>
+            <span id="score-p1">0</span> 分
+        </div>
+        <div id="timer-box">
+            ⏱️ <span id="timer">01:30</span>
+        </div>
+        <div id="p2-info" class="player-score">
+            <span>🥷 P2 忍者:</span>
+            <span id="score-p2">0</span> 分
+        </div>
+    </div>
+
+    <!-- 雙人遊戲區域 -->
+    <div id="game-container">
+        <!-- 玩家 1 區域 -->
+        <div id="zone-p1" class="player-zone">
+            <div class="target-board">
+                目標：<span id="target-p1" class="target-num">2</span>
+            </div>
+            <div class="zone-label">PLAYER 1 陣地</div>
+        </div>
+
+        <!-- 玩家 2 區域 -->
+        <div id="zone-p2" class="player-zone">
+            <div class="target-board">
+                目標：<span id="target-p2" class="target-num">2</span>
+            </div>
+            <div class="zone-label">PLAYER 2 陣地</div>
+        </div>
+    </div>
+
+    <!-- 開始說明彈窗 -->
+    <div id="start-modal" class="modal">
+        <div class="modal-content">
+            <h1>🎈 小一數學忍者大對決 🥷</h1>
+            <p>歡迎來到數學分合大挑戰！找出能合成目標數字的氣球吧！</p>
+            <div class="rule-box">
+                <p>🎯 <b>遊戲規則：</b></p>
+                <p>1. 觀察頂部的<b>「目標數字」</b>（例如：<b>2</b> 或 <b>3</b>）。</p>
+                <p>2. <b>點擊1個氣球</b>！若氣球上的組合（例如：<b>1 + 1</b>）相加等於目標數字 <b>2</b>，即可<b style="color:#00b894;">+1 分</b>並解鎖下一個目標！</p>
+                <p>3. 若點擊結果不等於目標數字（例如目標是3卻點了 2 + 2）：<b style="color:#d63031;">-1 分</b>。</p>
+                <p>4. 支援 iPad 雙人同時觸控，限時 <b>1分30秒</b>！</p>
+            </div>
+            <button class="btn" onclick="startGame()">開始對決！</button>
+        </div>
+    </div>
+
+    <!-- 結束結算彈窗 -->
+    <div id="end-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h1 id="winner-title">🏆 遊戲結束！</h1>
+            <p id="final-scores" style="font-size: 24px; font-weight: bold; margin: 20px 0;"></p>
+            <p id="winner-announcement" style="font-size: 32px; color: #d63031; font-weight: bold; text-shadow: 1px 1px 0 #fff;"></p>
+            <button class="btn" onclick="restartGame()">再玩一次 🔄</button>
+        </div>
+    </div>
+
+    <script>
+        const TOTAL_TIME = 90; // 1分30秒 = 90秒
+        let timeLeft = TOTAL_TIME;
+        let scoreP1 = 0;
+        let scoreP2 = 0;
+        let gameTimer = null;
+        let spawnIntervalP1 = null;
+        let spawnIntervalP2 = null;
+        let isGameRunning = false;
+
+        // 玩家進度：目標數從 2 依次到 10，然後循環
+        let targetP1 = 2;
+        let targetP2 = 2;
+
+        const zoneP1 = document.getElementById('zone-p1');
+        const zoneP2 = document.getElementById('zone-p2');
+        const targetP1El = document.getElementById('target-p1');
+        const targetP2El = document.getElementById('target-p2');
+        const scoreP1El = document.getElementById('score-p1');
+        const scoreP2El = document.getElementById('score-p2');
+        const timerEl = document.getElementById('timer');
+
+        // 音效生成器 (Web Audio API)
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            if (type === 'pop') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(500, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(900, audioCtx.currentTime + 0.08);
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.08);
+            } else if (type === 'wrong') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(220, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.2);
+                gain.gain.setValueAtTime(0.35, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.2);
+            } else if (type === 'levelup') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(850, audioCtx.currentTime + 0.25);
+                gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.25);
+            } else if (type === 'win') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(700, audioCtx.currentTime + 0.4);
+                gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.4);
+            }
+        }
+
+        function startGame() {
+            document.getElementById('start-modal').style.display = 'none';
+            document.getElementById('end-modal').style.display = 'none';
+
+            scoreP1 = 0;
+            scoreP2 = 0;
+            targetP1 = 2;
+            targetP2 = 2;
+            timeLeft = TOTAL_TIME;
+
+            scoreP1El.textContent = '0';
+            scoreP2El.textContent = '0';
+            targetP1El.textContent = targetP1;
+            targetP2El.textContent = targetP2;
+            updateTimerDisplay();
+
+            document.querySelectorAll('.balloon').forEach(el => el.remove());
+
+            isGameRunning = true;
+
+            gameTimer = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+
+            // 每 800 毫秒產生新氣球
+            spawnIntervalP1 = setInterval(() => spawnBalloon(zoneP1, 1), 800);
+            spawnIntervalP2 = setInterval(() => spawnBalloon(zoneP2, 2), 800);
+
+            setupMultiTouchListeners();
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            timerEl.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        // 根據目標數字生成拆解組合 (例如 3 可以拆成 1 + 2 或 2 + 1)
+        function generateExpression(targetNum, isCorrect) {
+            let num1, num2;
+            if (isCorrect) {
+                // 生成正確相加等於 targetNum 的組合
+                num1 = Math.floor(Math.random() * (targetNum - 1)) + 1;
+                num2 = targetNum - num1;
+            } else {
+                // 生成錯誤的組合
+                do {
+                    num1 = Math.floor(Math.random() * 9) + 1;
+                    num2 = Math.floor(Math.random() * 9) + 1;
+                } while (num1 + num2 === targetNum);
+            }
+            return {
+                text: `${num1} + ${num2}`,
+                sum: num1 + num2
+            };
+        }
+
+        // 動態生成帶有算式的氣球
+        function spawnBalloon(zone, playerNum) {
+            if (!isGameRunning) return;
+
+            const currentTarget = (playerNum === 1) ? targetP1 : targetP2;
+            // 65% 機率產生正確符合當前目標的氣球，35% 產生干擾項氣球
+            const isCorrect = Math.random() < 0.65;
+            const expr = generateExpression(currentTarget, isCorrect);
+
+            const balloon = document.createElement('div');
+            const colorIndex = (expr.sum % 6) + 1;
+            balloon.className = `balloon balloon-color-${colorIndex}`;
+            balloon.textContent = expr.text;
+            balloon.dataset.sum = expr.sum;
+
+            const zoneWidth = zone.clientWidth - 120;
+            const startX = Math.random() * zoneWidth + 10;
+            balloon.style.left = startX + 'px';
+            balloon.style.top = '-140px';
+
+            zone.appendChild(balloon);
+
+            let posY = -140;
+            const speed = Math.random() * 2 + 2;
+
+            const fallInterval = setInterval(() => {
+                if (!isGameRunning || !balloon.parentNode) {
+                    clearInterval(fallInterval);
+                    if (balloon.parentNode) balloon.remove();
+                    return;
+                }
+
+                posY += speed;
+                balloon.style.top = posY + 'px';
+
+                if (posY > zone.clientHeight + 140) {
+                    clearInterval(fallInterval);
+                    balloon.remove();
+                }
+            }, 1000 / 60);
+
+            balloon.dataset.fallId = fallInterval;
+        }
+
+        // iPad 多點觸控 (Multi-touch) 與滑鼠支援
+        const activeTouches = new Map();
+
+        function setupMultiTouchListeners() {
+            const gameContainer = document.getElementById('game-container');
+
+            gameContainer.ontouchstart = (e) => {
+                e.preventDefault();
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    const touch = e.changedTouches[i];
+                    activeTouches.set(touch.identifier, { x: touch.clientX, y: touch.clientY });
+                    processPoint(touch.clientX, touch.clientY);
+                }
+            };
+
+            gameContainer.ontouchmove = (e) => {
+                e.preventDefault();
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    const touch = e.changedTouches[i];
+                    const prevPos = activeTouches.get(touch.identifier);
+                    if (prevPos) {
+                        const zone = getZoneFromPoint(touch.clientX, touch.clientY);
+                        if (zone) {
+                            createSlashMark(zone, prevPos.x, prevPos.y, touch.clientX, touch.clientY);
+                        }
+                    }
+                    activeTouches.set(touch.identifier, { x: touch.clientX, y: touch.clientY });
+                    processPoint(touch.clientX, touch.clientY);
+                }
+            };
+
+            const handleTouchEnd = (e) => {
+                e.preventDefault();
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    activeTouches.delete(e.changedTouches[i].identifier);
+                }
+            };
+            gameContainer.ontouchend = handleTouchEnd;
+            gameContainer.ontouchcancel = handleTouchEnd;
+
+            // 電腦滑鼠相容測試
+            let isMouseDown = false;
+            let lastX = 0, lastY = 0;
+
+            gameContainer.onmousedown = (e) => {
+                isMouseDown = true;
+                lastX = e.clientX;
+                lastY = e.clientY;
+                processPoint(e.clientX, e.clientY);
+            };
+
+            gameContainer.onmousemove = (e) => {
+                if (!isMouseDown) return;
+                const zone = getZoneFromPoint(e.clientX, e.clientY);
+                if (zone && lastX !== 0) {
+                    createSlashMark(zone, lastX, lastY, e.clientX, e.clientY);
+                }
+                processPoint(e.clientX, e.clientY);
+                lastX = e.clientX;
+                lastY = e.clientY;
+            };
+
+            window.onmouseup = () => { isMouseDown = false; lastX = 0; lastY = 0; };
+        }
+
+        function getZoneFromPoint(x, y) {
+            const rectP1 = zoneP1.getBoundingClientRect();
+            const rectP2 = zoneP2.getBoundingClientRect();
+
+            if (x >= rectP1.left && x <= rectP1.right && y >= rectP1.top && y <= rectP1.bottom) {
+                return zoneP1;
+            }
+            if (x >= rectP2.left && x <= rectP2.right && y >= rectP2.top && y <= rectP2.bottom) {
+                return zoneP2;
+            }
+            return null;
+        }
+
+        function processPoint(x, y) {
+            if (!isGameRunning) return;
+
+            const elements = document.elementsFromPoint(x, y);
+            elements.forEach(el => {
+                if (el.classList.contains('balloon') && !el.classList.contains('popped')) {
+                    if (zoneP1.contains(el)) {
+                        popBalloon(el, 1, x, y);
+                    } else if (zoneP2.contains(el)) {
+                        popBalloon(el, 2, x, y);
+                    }
+                }
+            });
+        }
+
+        // 戳破氣球邏輯：觸控 1 個氣球即判定
+        function popBalloon(balloon, playerNum, x, y) {
+            balloon.classList.add('popped');
+            clearInterval(balloon.dataset.fallId);
+
+            const balloonSum = parseInt(balloon.dataset.sum);
+            let currentTarget = (playerNum === 1) ? targetP1 : targetP2;
+
+            if (balloonSum === currentTarget) {
+                // 正確答案：加 1 分並進階至下一個目標
+                playSound('levelup');
+
+                if (playerNum === 1) {
+                    scoreP1 += 1;
+                    scoreP1El.textContent = scoreP1;
+                    targetP1 = (targetP1 >= 10) ? 2 : targetP1 + 1; // 2 -> 3 -> ... -> 10 -> 2 循環
+                    targetP1El.textContent = targetP1;
+                } else {
+                    scoreP2 += 1;
+                    scoreP2El.textContent = scoreP2;
+                    targetP2 = (targetP2 >= 10) ? 2 : targetP2 + 1;
+                    targetP2El.textContent = targetP2;
+                }
+
+                showScorePopup(x, y, '+1 分！🎯', 'plus');
+            } else {
+                // 錯誤答案：扣 1 分
+                playSound('wrong');
+
+                if (playerNum === 1) {
+                    scoreP1 = Math.max(0, scoreP1 - 1);
+                    scoreP1El.textContent = scoreP1;
+                } else {
+                    scoreP2 = Math.max(0, scoreP2 - 1);
+                    scoreP2El.textContent = scoreP2;
+                }
+
+                showScorePopup(x, y, '-1 分 ❌', 'minus');
+            }
+
+            setTimeout(() => {
+                if (balloon.parentNode) balloon.remove();
+            }, 300);
+        }
+
+        // 刀光線條特效
+        function createSlashMark(zone, x1, y1, x2, y2) {
+            const rect = zone.getBoundingClientRect();
+            const localX1 = x1 - rect.left;
+            const localY1 = y1 - rect.top;
+            const localX2 = x2 - rect.left;
+            const localY2 = y2 - rect.top;
+
+            const distance = Math.hypot(localX2 - localX1, localY2 - localY1);
+            if (distance < 5) return;
+
+            const angle = Math.atan2(localY2 - localY1, localX2 - localX1) * (180 / Math.PI);
+
+            const slash = document.createElement('div');
+            slash.className = 'slash-mark';
+            slash.style.width = `${distance}px`;
+            slash.style.left = `${localX1}px`;
+            slash.style.top = `${localY1}px`;
+            slash.style.transformOrigin = '0 50%';
+            slash.style.transform = `rotate(${angle}deg)`;
+
+            zone.appendChild(slash);
+
+            setTimeout(() => {
+                slash.style.opacity = '0';
+                setTimeout(() => slash.remove(), 300);
+            }, 50);
+        }
+
+        // 浮動得分提示
+        function showScorePopup(x, y, text, type) {
+            const popup = document.createElement('div');
+            popup.className = `score-popup ${type === 'plus' ? 'score-plus' : 'score-minus'}`;
+            popup.textContent = text;
+            popup.style.left = `${x - 40}px`;
+            popup.style.top = `${y - 40}px`;
+
+            document.body.appendChild(popup);
+            setTimeout(() => popup.remove(), 800);
+        }
+
+        // 結束結算
+        function endGame() {
+            isGameRunning = false;
+            clearInterval(gameTimer);
+            clearInterval(spawnIntervalP1);
+            clearInterval(spawnIntervalP2);
+
+            playSound('win');
+
+            const endModal = document.getElementById('end-modal');
+            const winnerTitle = document.getElementById('winner-title');
+            const finalScores = document.getElementById('final-scores');
+            const winnerAnnouncement = document.getElementById('winner-announcement');
+
+            finalScores.textContent = `P1 最終得分: ${scoreP1} 分  |  P2 最終得分: ${scoreP2} 分`;
+
+            if (scoreP1 > scoreP2) {
+                winnerTitle.textContent = '🎉 PLAYER 1 獲勝！';
+                winnerAnnouncement.textContent = '👑 Player 1 WIN! 🥷✨';
+            } else if (scoreP2 > scoreP1) {
+                winnerTitle.textContent = '🎉 PLAYER 2 獲勝！';
+                winnerAnnouncement.textContent = '👑 Player 2 WIN! 🥷✨';
+            } else {
+                winnerTitle.textContent = '🤝 平手打成平手！';
+                winnerAnnouncement.textContent = 'DRAW! 大家都好棒！🎈';
+            }
+
+            endModal.style.display = 'flex';
+        }
+
+        function restartGame() {
+            startGame();
+        }
+    </script>
+</body>
+</html>
